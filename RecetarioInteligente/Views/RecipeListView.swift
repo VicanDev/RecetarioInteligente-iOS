@@ -3,6 +3,7 @@ import SwiftUI
 struct RecipeListView: View {
     @State private var searchText: String = ""
     @State private var recipes: [Meal] = []
+    @State private var isLoading: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -32,13 +33,33 @@ struct RecipeListView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .padding(.horizontal)
                 
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(recipes) { meal in
-                            RecipeCardView(meal: meal)
-                        }
+                if isLoading {
+                    Spacer()
+                    ProgressView("Buscando recetas...")
+                    Spacer()
+                } else if recipes.isEmpty {
+                    Spacer()
+                    VStack(spacing: 12) {
+                        Image(systemName: "fork.knife.circle")
+                            .font(.system(size: 60))
+                            .foregroundStyle(.gray)
+                        Text("No se encontraron recetas")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
                     }
-                    .padding(.horizontal)
+                    Spacer()
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(recipes) { meal in
+                                NavigationLink(destination: RecipeDetailView(meal: meal)) {
+                                    RecipeCardView(meal: meal)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
                 }
             }
             .navigationTitle("Recetas")
@@ -51,22 +72,27 @@ struct RecipeListView: View {
     }
     
     private func searchAction() {
-        guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        isLoading = true
         Task {
             do {
-                recipes = try await RecipeService.shared.searchRecipes(by: searchText)
+                recipes = try await RecipeService.shared.searchRecipes(by: trimmed)
             } catch {
                 recipes = []
             }
+            isLoading = false
         }
     }
     
     private func loadDefaultRecipes() async {
+        isLoading = true
         do {
             recipes = try await RecipeService.shared.searchRecipes(by: "Chicken")
         } catch {
             recipes = []
         }
+        isLoading = false
     }
 }
 
