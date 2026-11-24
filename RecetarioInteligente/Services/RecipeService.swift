@@ -30,4 +30,42 @@ class RecipeService {
             throw NetworkError.decodingError
         }
     }
+    
+    func getRecipeDetail(by id: String) async throws -> Meal? {
+        guard let url = URL(string: "\(baseURL)/lookup.php?i=\(id)") else {
+            throw NetworkError.invalidURL
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw NetworkError.noData
+        }
+        
+        do {
+            let decoded = try JSONDecoder().decode(MealResponse.self, from: data)
+            return decoded.meals?.first
+        } catch {
+            throw NetworkError.decodingError
+        }
+    }
+    
+    func getRandomRecipe() async throws -> Meal? {
+        guard let url = URL(string: "\(baseURL)/random.php") else {
+            throw NetworkError.invalidURL
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw NetworkError.noData
+        }
+        
+        do {
+            let decoded = try JSONDecoder().decode(MealResponse.self, from: data)
+            return decoded.meals?.first
+        } catch {
+            throw NetworkError.decodingError
+        }
+    }
 }
